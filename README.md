@@ -1,9 +1,5 @@
 # UAV
 
-Exactly. **That is the right way to approach it.** Don't start with the swarm. Build the intelligence layer progressively so that Phase 3 is an extension of things you've already built rather than a completely new project.
-
-I would structure your project like this:
-
 ## 🚁 Overall roadmap
 
 ```text
