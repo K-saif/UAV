@@ -54,4 +54,24 @@ ros2 run px4_control gesture_camera
 ```
 ------------------------------
 
+**only run when needed drone feed**
+note: replace with `world/baylands` with your current like `world/walls`  also need to update in `drone_camera_viewer.py` in `__init__` function then rebuild it 
+```bash
+cd ~/colcon_ws && colcon build --packages-select px4_control && source install/setup.bash
+```
+
+## 📷 Terminal 5: create a bridge for drone cam feed
+```bash
+source /opt/ros/jazzy/setup.bash
+ros2 run ros_gz_bridge parameter_bridge '/world/baylands/model/x500_depth_0/link/camera_link/sensor/IMX214/image@sensor_msgs/msg/Image@gz.msgs.Image'
+```
+------------------------------
+
+## 📷 Terminal 6: create window for drone cam feed
+```bash
+source ~/colcon_ws/install/setup.bash
+ros2 run px4_control drone_camera_viewer
+```
+------------------------------
+
 
