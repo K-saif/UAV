@@ -14,10 +14,6 @@ usbipd attach --wsl --busid 2-1
 ## Phase 2: One-Time System Configuration (Run This First)
 Open one WSL terminal and paste these two commands to permanently ensure your NVIDIA RTX 5050 handles the graphics rendering and your webcam permissions are unlocked:
 ```bash
-# Force WSL to use your dedicated RTX 5050 GPU
-echo "export MESA_D3D12_DEFAULT_ADAPTER_NAME=\"NVIDIA GeForce RTX 5050 Laptop GPU\"" >> ~/.bashrc
-echo "export LIBGL_ALWAYS_SOFTWARE=0" >> ~/.bashrc
-echo "export GALLIUM_DRIVER=d3d12" >> ~/.bashrc
 source ~/.bashrc
 # Grant full reading/writing permission to any attached video devices
 sudo chmod 666 /dev/video*
@@ -55,10 +51,7 @@ ros2 run px4_control gesture_camera
 ------------------------------
 
 **only run when needed drone feed**
-note: replace with `world/baylands` with your current like `world/walls`  also need to update in `drone_camera_viewer.py` in `__init__` function then rebuild it 
-```bash
-cd ~/colcon_ws && colcon build --packages-select px4_control && source install/setup.bash
-```
+note: replace with `world/baylands` with your current like `world/walls` 
 
 ## 📷 Terminal 5: create a bridge for drone cam feed
 ```bash

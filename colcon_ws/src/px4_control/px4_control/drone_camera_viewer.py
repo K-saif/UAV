@@ -3,43 +3,49 @@ from rclpy.node import Node
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
+import time
 
-class DroneCameraViewer(Node):
+class DroneCameraViewerFast(Node):
     def __init__(self):
-        super().__init__('drone_camera_viewer')
-        self.get_logger().info('Initializing Drone Camera Viewer Node...')
-
-        # Convert ROS 2 images into openCV matrices
+        super().__init__('drone_camera_viewer_fast')
+        self.get_logger().info('Initializing Fast Zero-Latency Drone POV Viewer...')
         self.bridge = CvBridge()
 
-        # Subscribe to the mapped Gazebo camera hardware topic
-        self.subscription = self.create_subscription(
-            Image,
-            '/world/baylands/model/x500_depth_0/link/camera_link/sensor/IMX214/image',
-            self.image_callback,
-            10
-        )
+        # AUTOMATIC WORLD DETECTION ENGINE
+        self.camera_topic = None
+        self.get_logger().info('Scanning ROS 2 network graph to auto-detect active Gazebo world...')
+        
+        while self.camera_topic is None and rclpy.ok():
+            topic_names_and_types = self.get_topic_names_and_types()
+            for topic_name, _ in topic_names_and_types:
+                if 'camera_link/sensor/IMX214/image' in topic_name:
+                    self.camera_topic = topic_name
+                    break
+            if self.camera_topic is None:
+                self.get_logger().warn('Awaiting Gazebo video stream topic... Make sure Terminal 5 bridge is running!')
+                time.sleep(1.0)
 
-        self.get_logger().info('Subscription locked onto /camera topic. Awaiting video stream feed...')
+        self.get_logger().info(f'SUCCESS! Locked onto active world camera topic: {self.camera_topic}')
+
+        # Subscribe directly to the dynamically discovered topic
+        self.image_sub = self.create_subscription(Image, self.camera_topic, self.image_callback, 10)
 
     def image_callback(self, msg):
         try:
-            # Translate the ROS image message to an OpenCV BGR format image
-            cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            # Instantly decode the ROS Image packet into an OpenCV frame with zero overhead
+            frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
-            # Display the frame in a graphical window
-            cv2.imshow("Drone POV Live Feed", cv_image)
+            # Render the raw video directly on the desktop
+            cv2.imshow("Drone POV Live Feed (High-Speed)", frame)
 
-            # Listen for ESC key to close window cleanly
-            if cv2.waitKey(1) & 0xFF == 27:
-                self.get_logger().info('Closing window sequence initiated.')
+            if cv2.waitKey(1) & 0xFF == 27: # ESC key to close cleanly
                 rclpy.shutdown()
         except Exception as e:
-            self.get_logger().error(f'Error processing incoming frame: {str(e)}')
+            pass
 
 def main(args=None):
     rclpy.init(args=args)
-    node = DroneCameraViewer()
+    node = DroneCameraViewerFast()
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
