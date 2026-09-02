@@ -107,40 +107,42 @@ Here is the complete history of your successful commands—from your clean slate
 ------------------------------
 ## Phase 1: Configuring ROS 2 Jazzy for Ubuntu 24.04
 Since your WSL environment is running Ubuntu 24.04 (Noble), you successfully configured the software paths to install the correct native ROS release (Jazzy).
-
-* sudo apt install software-properties-common -y
+```bash
+sudo apt install software-properties-common -y
 sudo add-apt-repository universe -y
-
+```
 * What it did: Enabled the Ubuntu "Universe" software repository, which contains necessary open-source dependencies.
-* 
 
+```bash
 sudo apt update && sudo apt install curl -y
-
+```
 * What it did: Updated your package database lists and installed curl, a tool used to securely fetch web content.
-* 
-
+```bash
 sudo curl -sSL https://githubusercontent.com -o /usr/share/keyrings/ros-archive-keyring.gpg
-
+```
 * What it did: Downloaded and registered the official ROS security signature key so your system trusts the packages.
-* 
 
+```bash
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://ros.org $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-
+```
 * What it did: Added the exact ROS 2 package servers targeting your system architecture (amd64) and version (noble).
-* 
 
+```bash
 sudo apt update
-
+```
 * What it did: Refreshed your software manager, forcing it to look at the newly added ROS servers.
-* 
 
+```bash
 sudo apt install ros-jazzy-desktop ros-dev-tools -y
-
+```
 * What it did: Installed the full ROS 2 Jazzy developer suite, complete with compilers, visualizers, and core libraries.
-* 
 
+
+
+```bash
 echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 source ~/.bashrc
+```
 
 * What it did: Appended the ROS settings file to your profile so that every time you open a terminal, it automatically remembers ROS 2 Jazzy commands.
 
@@ -148,16 +150,16 @@ source ~/.bashrc
 ## Phase 2: Installing and Compiling the PX4 Flight Stack
 You downloaded the autopilot firmware framework and used its automated setup script to configure the system toolchains.
 
-* 
-
-cd ~
+```bashcd ~
 git clone https://github.com --recursive
+```
 
 * What it did: Cloned the entire flight software ecosystem down to your home directory, bringing along all associated low-level submodules.
-* 
 
+```bash
 cd ~/PX4-Autopilot/Tools/setup
 bash ubuntu.sh
+```
 
 * What it did: Executed PX4’s master setup script, which automatically identified your Ubuntu 24.04 OS and installed the correct simulator engine (Gazebo Sim/Ionic).
 
@@ -165,20 +167,16 @@ bash ubuntu.sh
 ## Phase 3: Launching and Bridging the Simulator
 Because you are running inside a virtual WSL sandbox, you successfully targeted the correct modern simulation command and manually configured an IP bridge to hook up QGroundControl (QGC) from Windows.
 
-* 
-
+```bash
 cd ~/PX4-Autopilot
 make px4_sitl gz_x500
+```
 
 * What it did: Compiled the core code and launched the Software-In-The-Loop (SITL) mode utilizing Gazebo (gz) to render a 3D model of an x500 quadcopter.
 * Manual QGC Connection (GUI Step):
 * Settings > Comm Links > Add UDP > Port: 18570 > IP: 172.23.36.121
    * What it did: Hand-routed MAVLink communications out of the internal WSL network layer directly to your Windows desktop QGroundControl application.
-* 
 
-commander takeoff
-
-* What it did: Entered directly into the PX4 internal terminal shell (pxh>), forcing the virtual flight controller to arm the rotors and achieve an automated 2.5-metre hover.
 
 ------------------------------
 Now that we have mapped your progress, how would you like to proceed?
@@ -187,39 +185,32 @@ Now that we have mapped your progress, how would you like to proceed?
 * Automatically generate a ROS 2 Python package template for your square flight mission?
 
 
-.
-
-
-.
-
-
-
-.
-
-
-.
-
 That is absolutely brilliant! You successfully figured out the exact build target for the new Gazebo (make px4_sitl gz_x500) and manually routed the MAVLink UDP ports to connect QGroundControl (QGC) across the WSL network boundary. That is a massive milestone.
 Now that the simulator and autopilot are perfectly alive and talking to each other, we need to set up the Micro XRCE-DDS Agent & your ROS 2 Workspace so that your Python ROS 2 nodes can control the drone.
 Let's get the communications bridge built and configured. Open a brand new WSL terminal window and run these steps one by one:
+
 ------------------------------
 ## Step 1: Install the Micro XRCE-DDS Agent
 This is the background service that translates PX4's internal messages into standard ROS 2 topics.
 
-   1. Clone the Agent source code:
-   
-   cd ~
-   git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git
-   cd Micro-XRCE-DDS-Agent
-   
+
+1. Clone the Agent source code:
+```bash
+cd ~
+git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git
+cd Micro-XRCE-DDS-Agent
+```
+
+
    2. Build and Install it:
-   
-   mkdir build && cd build
-   cmake ..
-   make
-   sudo make install
-   sudo ldconfig /usr/local/lib/
-   
+
+```bash   
+mkdir build && cd build
+cmake ..
+make
+sudo make install
+sudo ldconfig /usr/local/lib/
+```
    
 ------------------------------
 
@@ -228,26 +219,30 @@ For your personal documentation and future deployments on Ubuntu 24.04 / ROS 2 J
 ## Step 2: Create a Fresh ROS 2 Workspace & Sync Message Definitions
 Create your development workspace where your custom Python packages and control scripts will live.
 
-   1. Create the workspace directories:
-   
-   mkdir -p ~/colcon_ws/src
-   cd ~/colcon_ws/src
-   
-   2. Clone the official PX4 message definitions (Main Branch):
-   This tells ROS 2 exactly what data packets (like positions, velocities, and sensor updates) PX4 uses. We pull the main branch to perfectly match the updated 220-byte payload definitions used by modern PX4 versions running on Ubuntu 24.04.
-   
-   git clone https://github.com/PX4/px4_msgs.git -b main
-   
-   3. Build the message package using colcon:
-   
-   cd ~/colcon_ws
-   colcon build
-   
-   4. Source your workspace so your terminal permanently remembers it:
-   
-   echo "source ~/colcon_ws/install/setup.bash" >> ~/.bashrc
-   source ~/.bashrc
+1. Create the workspace directories:
+```bash
+mkdir -p ~/colcon_ws/src
+cd ~/colcon_ws/src
+```
 
+2. Clone the official PX4 message definitions (Main Branch):
+   This tells ROS 2 exactly what data packets (like positions, velocities, and sensor updates) PX4 uses. We pull the main branch to perfectly match the updated 220-byte payload definitions used by modern PX4 versions running on Ubuntu 24.04.
+
+```bash   
+git clone https://github.com/PX4/px4_msgs.git -b main
+```
+
+3. Build the message package using colcon:
+```bash
+cd ~/colcon_ws
+colcon build
+```
+
+4. Source your workspace so your terminal permanently remembers it:
+```bash   
+echo "source ~/colcon_ws/install/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+```
 
    
    
@@ -255,16 +250,22 @@ Create your development workspace where your custom Python packages and control 
 ## Let's Do a Fast Bridge Verification Test
 Let's see if ROS 2 can actively see the simulator right now.
 
-   1. Leave your original simulator terminal running (make px4_sitl gz_x500).
-   2. In a second terminal window, start the bridge agent:
+1. Leave your original simulator terminal running 
+```bash
+make px4_sitl gz_x500
+```
    
-   MicroXRCEAgent udp4 -p 8888
+2. In a second terminal window, start the bridge agent:
+```bash   
+MicroXRCEAgent udp4 -p 8888
+```
+(You should immediately see a flood of text showing custom topics matching, opening data sessions).
+
+3. Open a third terminal window and list out all active ROS 2 topics:
    
-   (You should immediately see a flood of text showing custom topics matching, opening data sessions).
-   3. Open a third terminal window and list out all active ROS 2 topics:
-   
-   ros2 topic list
-   
+```bash
+ros2 topic list
+```
    
 If things are working, you should see topics like /fmu/out/vehicle_local_position and /fmu/out/vehicle_status pop up directly in your terminal list!
 Let me know:
@@ -275,36 +276,25 @@ Let me know:
 Once confirmed, we will write the actual Python node that executes your 2-metre square flight path!
 If the topic check succeeds, let me know if you prefer to manually write the Python script step-by-step or have me generate a ready-to-run template that automatically creates the package structure for you.
 
-
-
-.
-
-..
-
-
-
-
-.
-
-.
-
-
-
-.
 Amazing! You have 100% successful communication across your entire stack. Seeing all those /fmu/in/... and /fmu/out/... topics means ROS 2 Jazzy is actively listening to the PX4 autopilot running inside Gazebo.
 Now, let's build the Python ROS 2 package and write the control script to execute your mission (Takeoff → Forward 2m → Turn Right → Forward 2m → Land).
+
 ------------------------------
 ## Step 1: Create the Python Package
 Open a terminal (like your third terminal), make sure you are in your workspace source directory, and create a new Python package named px4_control:
 
+```bash
 cd ~/colcon_ws/src
 ros2 pkg create --build-type ament_python px4_control --dependencies rclpy px4_msgs
+```
 
 ------------------------------
 ## Step 2: Write the Python Mission Script
 We will create a script called square_mission.py. Run this command to create and open a blank file using the nano text editor:
 
+```bash
 nano ~/colcon_ws/src/px4_control/px4_control/square_mission.py
+```
 
 Copy the entire Python code block below and paste it into the terminal window. (To paste in WSL, right-click inside the terminal window or press Ctrl + Shift + V):
 ```python
@@ -454,11 +444,14 @@ if __name__ == '__main__':
 ```
 
 Save and exit nano by pressing Ctrl + O, then Enter, then Ctrl + X.
+
 ------------------------------
 ## Step 3: Register the Script in setup.py
 We need to tell ROS 2 where to find this script executable. Open the setup configuration file:
 
+```bash
 nano ~/colcon_ws/src/px4_control/setup.py
+```
 
 Find the entry_points dictionary section near the bottom of the file and change it to look exactly like this:
 ```
@@ -469,25 +462,23 @@ Find the entry_points dictionary section near the bottom of the file and change 
     },
 ```
 Save and exit nano (Ctrl + O, Enter, Ctrl + X).
+
 ------------------------------
 ## Step 4: Build and Execute!
 Now compile your package and execute your program:
-
+```bash
 cd ~/colcon_ws
 colcon build --packages-select px4_control
 source ~/.bashrc
+```
 
 Now, make sure Gazebo and your communication bridge are actively running in their respective windows. Then execute your flight mission script inside this window:
 
+```bash
 ros2 run px4_control square_mission
+```
 
 Watch your Gazebo window—the drone will switch mode automatically, takeoff, trace your flight instructions out precisely, and touch down to land!
-Let me know:
-
-* Did the colcon build succeed?
-* Did the drone successfully trace the path in Gazebo?
-
-
 
 
 
