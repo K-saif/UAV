@@ -31,6 +31,7 @@ Once the pxh> prompt appears, remember to paste your infinite battery overrides:
 param set COM_LOW_BAT_ACT 0
 param set COM_OBL_BAT_ACT 0
 ```
+if it gives warnings or errors, ignore for now
 
 ## 🌐 Terminal 2: Start Communication Bridge
 ```
