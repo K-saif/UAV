@@ -5,7 +5,7 @@ Open a Windows PowerShell (as Administrator) on your desktop and bind your lapto
 ```bash
 # 1. Look for your webcam's BUS ID (e.g., 2-1)
 usbipd list
-# 2. Attach it directly to your Ubuntu environment
+# 2. Attach it directly to your Ubuntu environment, in my case ID is 2-1
 usbipd attach --wsl --busid 2-1
 ```
 (Keep this PowerShell window open in the background while flying).
