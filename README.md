@@ -311,6 +311,5 @@ Your autonomy layer can eventually become:
         PX4                   PX4
 ```
 
-That will save you a **huge amount of rewriting in Phase 3**.
 
 ---
