@@ -118,15 +118,15 @@ fi
 source /opt/ros/jazzy/setup.bash
 export PATH=$PATH:/opt/xtensa-esp-elf/bin/
 source ~/colcon_ws/install/setup.bash
-export MESA_D3D12_DEFAULT_ADAPTER_NAME="NVIDIA GeForce RTX 5050 Laptop GPU"
+# export MESA_D3D12_DEFAULT_ADAPTER_NAME="NVIDIA GeForce RTX 5050 Laptop GPU"
 export LIBGL_ALWAYS_SOFTWARE=0
 export GALLIUM_DRIVER=d3d12
 
-export GZ_VERSION=harmonic
-export GZ_CONFIG_PATH=/usr/share/gz:$GZ_CONFIG_PATH
+# export GZ_VERSION=harmonic
+# export GZ_CONFIG_PATH=/usr/share/gz:$GZ_CONFIG_PATH
 # Force Qt to use X11/xcb rendering engine
-export QT_QPA_PLATFORM=xcb
-export DISPLAY=:0
+# export QT_QPA_PLATFORM=xcb
+# export DISPLAY=:0
 
 # Allow Mesa / D3D12 to fall back gracefully if RDP pipeline stalls
-export MESA_LOADER_DRIVER_OVERRIDE=d3d12
+# export MESA_LOADER_DRIVER_OVERRIDE=d3d12

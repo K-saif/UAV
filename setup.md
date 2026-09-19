@@ -98,6 +98,280 @@ ros2 run drone_control offboard_control
 
 
 
+
+
+Yes — if **`make px4_sitl gz_x500` is already running correctly**, then you don't need to reinstall PX4 or ROS 2. You can reinstall **only Gazebo**.
+
+For your **Ubuntu 24.04 + PX4 SITL** setup, PX4 currently supports Gazebo Harmonic, Ionic, and Jetty on 24.04, and `make px4_sitl gz_x500` is the normal PX4 Gazebo command. ([PX4 Documentation][1])
+
+Since your existing setup works, I'd reinstall **Gazebo Harmonic**, rather than changing versions.
+
+## 1. Stop the running simulator
+
+In the PX4 terminal:
+
+```bash
+Ctrl+C
+```
+
+Then check what Gazebo you currently have:
+
+```bash
+gz sim --version
+```
+
+Also:
+
+```bash
+which gz
+```
+
+If you want to completely replace the existing Gazebo installation, continue below.
+
+---
+
+## 2. Remove existing Gazebo packages
+
+First see what is installed:
+
+```bash
+dpkg -l | grep -E 'gz-|gazebo'
+```
+
+If this is a fresh WSL and you don't have other Gazebo projects you care about, remove the existing Gazebo Harmonic installation:
+
+```bash
+sudo apt remove --purge 'gz-*' 'libgz-*' -y
+sudo apt autoremove -y
+```
+
+Then remove the Gazebo repository:
+
+```bash
+sudo rm -f /etc/apt/sources.list.d/gazebo-stable.list
+```
+
+And its key:
+
+```bash
+sudo rm -f /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+```
+
+Then:
+
+```bash
+sudo apt update
+```
+
+---
+
+# 3. Install Gazebo Harmonic again
+
+The official Gazebo instructions provide Harmonic binaries for Ubuntu 24.04. ([Gazebo][2])
+
+Install prerequisites:
+
+```bash
+sudo apt update
+sudo apt install curl lsb-release gnupg -y
+```
+
+Add the OSRF repository:
+
+```bash
+sudo curl https://packages.osrfoundation.org/gazebo.gpg \
+  --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+```
+
+Then:
+
+```bash
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+```
+
+Update:
+
+```bash
+sudo apt update
+```
+
+Install Harmonic:
+
+```bash
+sudo apt install gz-harmonic -y
+```
+
+---
+
+# 4. Verify Gazebo
+
+Run:
+
+```bash
+gz sim --version
+```
+
+You should get something indicating:
+
+```text
+Gazebo Sim, version 8.x.x
+```
+
+Harmonic corresponds to Gazebo Sim 8.
+
+Also:
+
+```bash
+which gz
+```
+
+You should get a valid executable path.
+
+---
+
+# 5. Test Gazebo independently
+
+Before involving PX4, test Gazebo itself:
+
+```bash
+gz sim
+```
+
+If the Gazebo GUI opens, close it with:
+
+```text
+Ctrl+C
+```
+
+This is useful because it separates:
+
+```text
+WSL GUI/Gazebo problem
+```
+
+from:
+
+```text
+PX4 ↔ Gazebo integration problem
+```
+
+---
+
+# 6. Rebuild PX4's Gazebo target
+
+Since you have already successfully run:
+
+```bash
+cd ~/PX4-Autopilot
+make px4_sitl gz_x500
+```
+
+you probably don't need to rebuild everything.
+
+But after replacing Gazebo, I would do:
+
+```bash
+cd ~/PX4-Autopilot
+make distclean
+```
+
+Then:
+
+```bash
+make px4_sitl gz_x500
+```
+
+PX4 specifically recommends `make distclean` if a Gazebo target is not recognized or the build state needs cleaning. ([PX4 Documentation][1])
+
+---
+
+## One important point for your project
+
+Your original guide uses:
+
+```bash
+make px4_sitl gz_x500
+```
+
+For your **depth-camera obstacle avoidance project**, you'll eventually want:
+
+```bash
+make px4_sitl gz_x500_depth
+```
+
+PX4 documents `gz_x500_depth` as the X500 with a front-facing depth camera. ([PX4 Documentation][1])
+
+So your eventual stack will be:
+
+```text
+                    Windows 11
+                         │
+                  QGroundControl
+                         │
+                         │ MAVLink
+                         ▼
+┌────────────────────────────────────────────┐
+│              WSL2 Ubuntu 24.04             │
+│                                            │
+│  ┌───────────────┐                         │
+│  │ PX4 SITL      │                         │
+│  │               │                         │
+│  │ x500_depth    │                         │
+│  └───────┬───────┘                         │
+│          │                                  │
+│          ▼                                  │
+│  ┌─────────────────┐                       │
+│  │ Gazebo Harmonic │                       │
+│  │                 │                       │
+│  │ Depth Camera    │                       │
+│  └────────┬────────┘                       │
+│           │                                │
+│           ▼                                │
+│      ros_gz_bridge                         │
+│           │                                │
+│           ▼                                │
+│      ROS 2 Jazzy                           │
+│           │                                │
+│     ┌─────┴──────────┐                     │
+│     │                │                     │
+│ Perception      Drone Control              │
+│     │                │                     │
+│     └───────┬────────┘                     │
+│             ▼                              │
+│          PX4 / FMU                         │
+└────────────────────────────────────────────┘
+```
+
+So **don't reinstall ROS 2** just because you're reinstalling Gazebo. Your current ROS 2 Jazzy installation and PX4 installation can remain untouched.
+
+### One thing I'd check before you remove anything
+
+Run:
+
+```bash
+gz sim --version
+```
+
+and send me the output.
+
+If it already says **Gazebo Harmonic**, I may recommend a **cleaner reinstall procedure** than blindly removing every `gz-*` package, because PX4's `ubuntu.sh` may have installed additional simulation dependencies alongside Gazebo. The official PX4 setup script is designed to install the simulator/toolchain on a clean Ubuntu LTS installation. ([PX4 Documentation][3])
+
+[1]: https://docs.px4.io/main/en/sim_gazebo_gz/?utm_source=chatgpt.com "Gazebo Simulation | PX4 Guide (main)"
+[2]: https://gazebosim.org/docs/harmonic/install_ubuntu/?utm_source=chatgpt.com "Binary Installation on Ubuntu — Gazebo harmonic documentation"
+[3]: https://docs.px4.io/main/en/dev_setup/dev_env_linux_ubuntu?utm_source=chatgpt.com "Ubuntu Development Environment | PX4 Guide (main)"
+
+
+
+
+
+
+
+
+
+
+
+
+
 .
 
 
@@ -105,44 +379,487 @@ ros2 run drone_control offboard_control
 
 Here is the complete history of your successful commands—from your clean slate to a flying simulator—organized in sequence with short explanations of why they worked.
 ------------------------------
-## Phase 1: Configuring ROS 2 Jazzy for Ubuntu 24.04
-Since your WSL environment is running Ubuntu 24.04 (Noble), you successfully configured the software paths to install the correct native ROS release (Jazzy).
+Yes. Since you are on a **fresh Ubuntu 24.04 WSL2** and your goal is **PX4 + Gazebo + ROS 2 Jazzy**, I would use a clean ROS installation sequence rather than the older commands in your previous guide.
+
+ROS 2 Jazzy is the ROS distribution intended for Ubuntu 24.04/Noble. ([ROS Documentation][1])
+
+# ROS 2 Jazzy — Fresh Ubuntu 24.04 WSL2 Guide
+
+I'll keep this focused on getting you to a **verified ROS 2 Jazzy installation** first. Don't install PX4 yet.
+
+---
+
+## 0. Confirm Ubuntu 24.04
+
+Open your fresh WSL Ubuntu terminal:
+
 ```bash
-sudo apt install software-properties-common -y
+lsb_release -a
+```
+
+You want:
+
+```text
+Description:    Ubuntu 24.04.x LTS
+Codename:       noble
+```
+
+Also check architecture:
+
+```bash
+dpkg --print-architecture
+```
+
+For your machine it should be:
+
+```text
+amd64
+```
+
+---
+
+# 1. Update Ubuntu
+
+Run:
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+Then install the basic dependencies:
+
+```bash
+sudo apt install -y \
+    software-properties-common \
+    curl \
+    ca-certificates \
+    gnupg \
+    lsb-release
+```
+
+---
+
+# 2. Enable Universe
+
+```bash
 sudo add-apt-repository universe -y
 ```
-* What it did: Enabled the Ubuntu "Universe" software repository, which contains necessary open-source dependencies.
 
-```bash
-sudo apt update && sudo apt install curl -y
-```
-* What it did: Updated your package database lists and installed curl, a tool used to securely fetch web content.
-```bash
-sudo curl -sSL https://githubusercontent.com -o /usr/share/keyrings/ros-archive-keyring.gpg
-```
-* What it did: Downloaded and registered the official ROS security signature key so your system trusts the packages.
-
-```bash
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://ros.org $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-```
-* What it did: Added the exact ROS 2 package servers targeting your system architecture (amd64) and version (noble).
+Then:
 
 ```bash
 sudo apt update
 ```
-* What it did: Refreshed your software manager, forcing it to look at the newly added ROS servers.
+
+You already successfully did this part in your previous attempt. 
+
+---
+
+# 3. Add the Official ROS 2 Repository
+
+This is the part where your previous setup went wrong.
+
+### First create the keyring directory
 
 ```bash
-sudo apt install ros-jazzy-desktop ros-dev-tools -y
+sudo mkdir -p /etc/apt/keyrings
 ```
-* What it did: Installed the full ROS 2 Jazzy developer suite, complete with compilers, visualizers, and core libraries.
 
+### Download the ROS key
 
+Use:
+
+```bash
+sudo curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key \
+    -o /etc/apt/keyrings/ros-archive-keyring.gpg
+```
+
+Check that it exists:
+
+```bash
+ls -lh /etc/apt/keyrings/ros-archive-keyring.gpg
+```
+
+You should get a file with a non-zero size.
+
+---
+
+# 4. Add the ROS 2 Repository
+
+Run:
+
+```bash
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+```
+
+---
+
+# 5. Update APT
+
+Now:
+
+```bash
+sudo apt update
+```
+
+Look carefully at the output.
+
+You should see something referring to:
+
+```text
+packages.ros.org/ros2/ubuntu
+```
+
+and **you should NOT see**:
+
+```text
+ros.org noble Release
+404 Not Found
+```
+
+If you see an error here, **stop and send me the output** rather than continuing.
+
+---
+
+# 6. Install ROS 2 Jazzy Desktop
+
+Now install:
+
+```bash
+sudo apt install ros-jazzy-desktop -y
+```
+
+This is the full desktop installation, which is what I recommend for your PX4/Gazebo development environment.
+
+Then install development tools:
+
+```bash
+sudo apt install ros-dev-tools -y
+```
+
+---
+
+# 7. Source ROS 2
+
+Test it immediately:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+```
+
+Then:
+
+```bash
+printenv ROS_DISTRO
+```
+
+Expected:
+
+```text
+jazzy
+```
+
+Now:
+
+```bash
+ros2 --help
+```
+
+You should see the ROS 2 command-line interface help.
+
+---
+
+# 8. Make ROS 2 Permanent
+
+You don't want to run `source` manually every time.
+
+Run:
 
 ```bash
 echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
+```
+
+Then:
+
+```bash
 source ~/.bashrc
 ```
+
+Verify again:
+
+```bash
+printenv ROS_DISTRO
+```
+
+Expected:
+
+```text
+jazzy
+```
+
+---
+
+# 9. Test ROS 2 Properly
+
+Open **Terminal 1**:
+
+```bash
+ros2 run demo_nodes_cpp talker
+```
+
+You should see:
+
+```text
+[INFO] ... Publishing: 'Hello World: 1'
+[INFO] ... Publishing: 'Hello World: 2'
+[INFO] ... Publishing: 'Hello World: 3'
+```
+
+Leave that running.
+
+Open **Terminal 2**:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+```
+
+Then:
+
+```bash
+ros2 run demo_nodes_py listener
+```
+
+You should see:
+
+```text
+[INFO] ... I heard: [Hello World: 1]
+[INFO] ... I heard: [Hello World: 2]
+[INFO] ... I heard: [Hello World: 3]
+```
+
+If that works, your ROS 2 installation and DDS communication are working.
+
+---
+
+# 10. Test ROS 2 Graph
+
+Open another terminal:
+
+```bash
+ros2 node list
+```
+
+You should see something like:
+
+```text
+/talker
+/listener
+```
+
+And:
+
+```bash
+ros2 topic list
+```
+
+You should see:
+
+```text
+/chatter
+/parameter_events
+/rosout
+```
+
+You can inspect the topic:
+
+```bash
+ros2 topic echo /chatter
+```
+
+You should see:
+
+```text
+data: Hello World: ...
+```
+
+---
+
+# 11. Create Your ROS 2 Workspace
+
+For your PX4 project, I recommend keeping the workspace separate from the PX4 source tree.
+
+Create:
+
+```bash
+mkdir -p ~/colcon_ws/src
+cd ~/colcon_ws
+```
+
+Test the empty workspace:
+
+```bash
+colcon build
+```
+
+You should get a successful build.
+
+Then:
+
+```bash
+source ~/colcon_ws/install/setup.bash
+```
+
+Make it permanent:
+
+```bash
+echo "source ~/colcon_ws/install/setup.bash" >> ~/.bashrc
+```
+
+Then:
+
+```bash
+source ~/.bashrc
+```
+
+---
+
+# 12. Install Useful ROS Development Packages
+
+For the work you're doing with PX4, cameras, OpenCV and Gazebo, I'd install these now:
+
+```bash
+sudo apt install -y \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    python3-vcstool \
+    python3-pip \
+    python3-opencv \
+    ros-jazzy-cv-bridge \
+    ros-jazzy-image-transport \
+    ros-jazzy-vision-msgs \
+    ros-jazzy-ros-gz \
+    ros-jazzy-ros-gz-bridge \
+    ros-jazzy-ros-gz-image
+```
+
+Then initialize rosdep:
+
+```bash
+sudo rosdep init
+```
+
+If it says:
+
+```text
+ERROR: default sources list file already exists
+```
+
+that's okay.
+
+Then:
+
+```bash
+rosdep update
+```
+
+---
+
+# 13. Verify Gazebo/ROS Integration
+
+Check:
+
+```bash
+ros2 pkg list | grep ros_gz
+```
+
+You should see packages such as:
+
+```text
+ros_gz_bridge
+ros_gz_image
+ros_gz_sim
+...
+```
+
+Check the bridge executable:
+
+```bash
+ros2 run ros_gz_bridge parameter_bridge --help
+```
+
+If you get help output, the ROS ↔ Gazebo bridge is installed.
+
+---
+
+# 14. Final ROS 2 Health Check
+
+Run these:
+
+```bash
+echo $ROS_DISTRO
+```
+
+Expected:
+
+```text
+jazzy
+```
+
+```bash
+which ros2
+```
+
+Expected something similar to:
+
+```text
+/opt/ros/jazzy/bin/ros2
+```
+
+```bash
+ros2 doctor --report
+```
+
+Then:
+
+```bash
+ros2 pkg list | wc -l
+```
+
+You should have a large number of packages.
+
+---
+
+# Your final setup should look like this
+
+```text
+WSL2
+└── Ubuntu 24.04
+    │
+    ├── ROS 2 Jazzy
+    │   ├── rclpy
+    │   ├── ros2 CLI
+    │   ├── ros_gz
+    │   ├── cv_bridge
+    │   └── image_transport
+    │
+    └── ~/colcon_ws
+        └── src/
+```
+
+And later we'll add:
+
+```text
+~/PX4-Autopilot
+~/Micro-XRCE-DDS-Agent
+~/colcon_ws
+    └── src/
+        └── px4_msgs
+        └── drone_control
+        └── drone_perception
+```
+
+
 
 * What it did: Appended the ROS settings file to your profile so that every time you open a terminal, it automatically remembers ROS 2 Jazzy commands.
 
@@ -150,8 +867,10 @@ source ~/.bashrc
 ## Phase 2: Installing and Compiling the PX4 Flight Stack
 You downloaded the autopilot firmware framework and used its automated setup script to configure the system toolchains.
 
-```bashcd ~
-git clone https://github.com --recursive
+
+```bash
+cd ~
+git clone https://github.com/PX4/PX4-Autopilot.git --recursive
 ```
 
 * What it did: Cloned the entire flight software ecosystem down to your home directory, bringing along all associated low-level submodules.
