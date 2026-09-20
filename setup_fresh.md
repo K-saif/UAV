@@ -241,17 +241,13 @@ source ~/.bashrc
 
 When you want to run your vision control node with the simulator, use **six separate terminal windows**:
 
-## One-Time System Configuration (Run This First)
-Open one WSL terminal and paste these two commands to permanently ensure your NVIDIA RTX 5050 handles the graphics rendering and your webcam permissions are unlocked:
+before anything run, 
+
 ```bash
 source ~/.bashrc
-# Grant full reading/writing permission to any attached video devices
-sudo chmod 666 /dev/video*
 ```
-------------------------------
-## Phase 3: The 4 Active Terminal Commands
-Now, run these commands in their respective terminal windows to start your flight sequence:
-## 🖥️ Terminal 1: Launch Gazebo Simulation (GPU Accelerated)
+
+### 🖥️ Terminal 1: Launch Gazebo Simulation (GPU Accelerated)
 ```bash
 cd ~/PX4-Autopilot
 make px4_sitl gz_x500
@@ -263,17 +259,17 @@ param set COM_OBL_BAT_ACT 0
 ```
 if it gives warnings or errors, ignore for now
 
-## 🌐 Terminal 2: Start Communication Bridge
+### 🌐 Terminal 2: Start Communication Bridge
 ```
 MicroXRCEAgent udp4 -p 8888
 ```
-## 🧠 Terminal 3: Run the Flight Control Node
+### 🧠 Terminal 3: Run the Flight Control Node
 ```bash
 source /opt/ros/jazzy/setup.bash
 source ~/colcon_ws/install/setup.bash
 ros2 run px4_control square_mission
 ```
-## 📷 Terminal 4: Launch MediaPipe Hand Tracking Camera
+### 📷 Terminal 4: Launch MediaPipe Hand Tracking Camera
 ```bash
 source /opt/ros/jazzy/setup.bash
 source ~/colcon_ws/install/setup.bash
@@ -284,14 +280,14 @@ ros2 run px4_control gesture_camera
 **only run when needed drone feed**
 note: replace with `world/baylands` with your current like `world/walls` 
 
-## 📷 Terminal 5: create a bridge for drone cam feed
+### 📷 Terminal 5: create a bridge for drone cam feed
 ```bash
 source /opt/ros/jazzy/setup.bash
-ros2 run ros_gz_bridge parameter_bridge '/world/baylands/model/x500_depth_0/link/camera_link/sensor/IMX214/image@sensor_msgs/msg/Image@gz.msgs.Image'
+ros2 run ros_gz_bridge parameter_bridge '/world/default/model/x500_depth_0/link/camera_link/sensor/IMX214/image@sensor_msgs/msg/Image@gz.msgs.Image'
 ```
 ------------------------------
 
-## 📷 Terminal 6: create window for drone cam feed
+### 📷 Terminal 6: create window for drone cam feed
 ```bash
 source ~/colcon_ws/install/setup.bash
 ros2 run px4_control drone_camera_viewer
