@@ -32,7 +32,7 @@ class DroneCameraViewerFast(Node):
 
     def image_callback(self, msg):
         try:
-            # Instantly decode the ROS Image packet into an OpenCV frame with zero overhead
+            # Instantly decode the ROS Image packet into an OpenCV frame
             frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
 
             # Render the raw video directly on the desktop
@@ -41,7 +41,7 @@ class DroneCameraViewerFast(Node):
             if cv2.waitKey(1) & 0xFF == 27: # ESC key to close cleanly
                 rclpy.shutdown()
         except Exception as e:
-            pass
+            self.get_logger().error(f"Failed to process image frame: {str(e)}")
 
 def main(args=None):
     rclpy.init(args=args)
