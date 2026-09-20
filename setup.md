@@ -1,171 +1,4 @@
-
-### Terminal 1 — PX4 + Gazebo Wall World
-
-```bash
-cd ~/PX4-Autopilot
-make px4_sitl gz_x500_depth_walls
-```
-
-Wait until:
-
-```text
-INFO [commander] Ready for takeoff!
-```
-
-This starts PX4 SITL with the **X500 depth-camera drone and wall world**.
-
----
-
-### Terminal 2 — Micro XRCE-DDS Agent
-
-```bash
-source /opt/ros/jazzy/setup.bash
-source ~/px4_ros_uxrce_dds_ws/install/local_setup.bash
-
-MicroXRCEAgent udp4 -p 8888
-```
-
-This establishes the **PX4 ↔ ROS 2 communication bridge**.
-
----
-
-### Terminal 3 — Depth Camera Bridge
-
-```bash
-source /opt/ros/jazzy/setup.bash
-
-ros2 run ros_gz_bridge parameter_bridge \
-/depth_camera@sensor_msgs/msg/Image[gz.msgs.Image
-```
-
-This bridges the **Gazebo depth-camera image → ROS 2**.
-
----
-
-### Terminal 4 — Perception
-
-```bash
-source /opt/ros/jazzy/setup.bash
-source ~/drone/ros2_ws/install/setup.bash
-
-ros2 run drone_perception depth_processor
-```
-
-The perception node processes the depth image and produces readings such as:
-
-```text
-L=7.2m | C=4.1m | R=7.0m | PATH CLEAR
-```
-
-or:
-
-```text
-L=7.1m | C=2.3m | R=6.8m | AVOID LEFT
-```
-
-So the current perception system can determine **left, center, and right obstacle distances** and make a basic avoidance decision.
-
----
-
-### Terminal 5 — Autonomous Controller
-
-Started only after the previous four terminals are working:
-
-```bash
-source /opt/ros/jazzy/setup.bash
-source ~/drone/ros2_ws/install/setup.bash
-
-ros2 run drone_control offboard_control
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-.
-
-
-
-
-
-
-
-
-
-Yes — if **`make px4_sitl gz_x500` is already running correctly**, then you don't need to reinstall PX4 or ROS 2. You can reinstall **only Gazebo**.
-
-For your **Ubuntu 24.04 + PX4 SITL** setup, PX4 currently supports Gazebo Harmonic, Ionic, and Jetty on 24.04, and `make px4_sitl gz_x500` is the normal PX4 Gazebo command. ([PX4 Documentation][1])
-
-Since your existing setup works, I'd reinstall **Gazebo Harmonic**, rather than changing versions.
-
-## 1. Stop the running simulator
-
-In the PX4 terminal:
-
-```bash
-Ctrl+C
-```
-
-Then check what Gazebo you currently have:
-
-```bash
-gz sim --version
-```
-
-Also:
-
-```bash
-which gz
-```
-
-If you want to completely replace the existing Gazebo installation, continue below.
-
----
-
-## 2. Remove existing Gazebo packages
-
-First see what is installed:
-
-```bash
-dpkg -l | grep -E 'gz-|gazebo'
-```
-
-If this is a fresh WSL and you don't have other Gazebo projects you care about, remove the existing Gazebo Harmonic installation:
-
-```bash
-sudo apt remove --purge 'gz-*' 'libgz-*' -y
-sudo apt autoremove -y
-```
-
-Then remove the Gazebo repository:
-
-```bash
-sudo rm -f /etc/apt/sources.list.d/gazebo-stable.list
-```
-
-And its key:
-
-```bash
-sudo rm -f /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
-```
-
-Then:
-
-```bash
-sudo apt update
-```
-
----
-
-# 3. Install Gazebo Harmonic again
+# Install Gazebo Harmonic
 
 The official Gazebo instructions provide Harmonic binaries for Ubuntu 24.04. ([Gazebo][2])
 
@@ -203,7 +36,7 @@ sudo apt install gz-harmonic -y
 
 ---
 
-# 4. Verify Gazebo
+## Verify Gazebo
 
 Run:
 
@@ -229,7 +62,7 @@ You should get a valid executable path.
 
 ---
 
-# 5. Test Gazebo independently
+## Test Gazebo independently
 
 Before involving PX4, test Gazebo itself:
 
@@ -243,136 +76,10 @@ If the Gazebo GUI opens, close it with:
 Ctrl+C
 ```
 
-This is useful because it separates:
-
-```text
-WSL GUI/Gazebo problem
-```
-
-from:
-
-```text
-PX4 ↔ Gazebo integration problem
-```
-
 ---
 
-# 6. Rebuild PX4's Gazebo target
-
-Since you have already successfully run:
-
-```bash
-cd ~/PX4-Autopilot
-make px4_sitl gz_x500
-```
-
-you probably don't need to rebuild everything.
-
-But after replacing Gazebo, I would do:
-
-```bash
-cd ~/PX4-Autopilot
-make distclean
-```
-
-Then:
-
-```bash
-make px4_sitl gz_x500
-```
-
-PX4 specifically recommends `make distclean` if a Gazebo target is not recognized or the build state needs cleaning. ([PX4 Documentation][1])
-
----
-
-## One important point for your project
-
-Your original guide uses:
-
-```bash
-make px4_sitl gz_x500
-```
-
-For your **depth-camera obstacle avoidance project**, you'll eventually want:
-
-```bash
-make px4_sitl gz_x500_depth
-```
-
-PX4 documents `gz_x500_depth` as the X500 with a front-facing depth camera. ([PX4 Documentation][1])
-
-So your eventual stack will be:
-
-```text
-                    Windows 11
-                         │
-                  QGroundControl
-                         │
-                         │ MAVLink
-                         ▼
-┌────────────────────────────────────────────┐
-│              WSL2 Ubuntu 24.04             │
-│                                            │
-│  ┌───────────────┐                         │
-│  │ PX4 SITL      │                         │
-│  │               │                         │
-│  │ x500_depth    │                         │
-│  └───────┬───────┘                         │
-│          │                                  │
-│          ▼                                  │
-│  ┌─────────────────┐                       │
-│  │ Gazebo Harmonic │                       │
-│  │                 │                       │
-│  │ Depth Camera    │                       │
-│  └────────┬────────┘                       │
-│           │                                │
-│           ▼                                │
-│      ros_gz_bridge                         │
-│           │                                │
-│           ▼                                │
-│      ROS 2 Jazzy                           │
-│           │                                │
-│     ┌─────┴──────────┐                     │
-│     │                │                     │
-│ Perception      Drone Control              │
-│     │                │                     │
-│     └───────┬────────┘                     │
-│             ▼                              │
-│          PX4 / FMU                         │
-└────────────────────────────────────────────┘
-```
-
-So **don't reinstall ROS 2** just because you're reinstalling Gazebo. Your current ROS 2 Jazzy installation and PX4 installation can remain untouched.
-
-### One thing I'd check before you remove anything
-
-Run:
-
-```bash
-gz sim --version
-```
-
-and send me the output.
-
-If it already says **Gazebo Harmonic**, I may recommend a **cleaner reinstall procedure** than blindly removing every `gz-*` package, because PX4's `ubuntu.sh` may have installed additional simulation dependencies alongside Gazebo. The official PX4 setup script is designed to install the simulator/toolchain on a clean Ubuntu LTS installation. ([PX4 Documentation][3])
-
-[1]: https://docs.px4.io/main/en/sim_gazebo_gz/?utm_source=chatgpt.com "Gazebo Simulation | PX4 Guide (main)"
-[2]: https://gazebosim.org/docs/harmonic/install_ubuntu/?utm_source=chatgpt.com "Binary Installation on Ubuntu — Gazebo harmonic documentation"
-[3]: https://docs.px4.io/main/en/dev_setup/dev_env_linux_ubuntu?utm_source=chatgpt.com "Ubuntu Development Environment | PX4 Guide (main)"
 
 
-
-
-
-
-
-
-
-
-
-
-
-.
 
 
 
@@ -832,9 +539,7 @@ You should have a large number of packages.
 
 # Your final setup should look like this
 
-```text
-WSL2
-└── Ubuntu 24.04
+Ubuntu 24.04
     │
     ├── ROS 2 Jazzy
     │   ├── rclpy
@@ -846,19 +551,6 @@ WSL2
     └── ~/colcon_ws
         └── src/
 ```
-
-And later we'll add:
-
-```text
-~/PX4-Autopilot
-~/Micro-XRCE-DDS-Agent
-~/colcon_ws
-    └── src/
-        └── px4_msgs
-        └── drone_control
-        └── drone_perception
-```
-
 
 
 * What it did: Appended the ROS settings file to your profile so that every time you open a terminal, it automatically remembers ROS 2 Jazzy commands.
