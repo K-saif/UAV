@@ -74,23 +74,26 @@ class GestureDroneFlightNode(Node):
                 self.mission_step = 'FLIGHT_ACTIVE'
 
         elif self.mission_step == 'FLIGHT_ACTIVE':
-            # Rotational Angular modifications (Update heading alignment first)
-            if self.current_gesture == 'TURN_LEFT':
-                self.target_yaw -= 0.04  
-            elif self.current_gesture == 'TURN_RIGHT':
-                self.target_yaw += 0.04  
+            # SPEED CONFIGURATION CONSTANTS
+            MOVE_SPEED = 0.16  # Increased from 0.04 (m/step) -> ~2.4 m/s
+            YAW_SPEED  = 0.04  # Increased from 0.04 (rad/step) -> ~1.6 rad/s
+            CLIMB_SPEED = 0.08 # Increased from 0.03 (m/step) -> ~1.2 m/s
 
-            # FIX: Relative Directional movement calculation 
+            # Rotational Angular modifications
+            if self.current_gesture == 'TURN_LEFT':
+                self.target_yaw -= YAW_SPEED  
+            elif self.current_gesture == 'TURN_RIGHT':
+                self.target_yaw += YAW_SPEED  
+
+            # Relative Directional movement calculation 
             if self.current_gesture == 'FORWARD':
-                step_size = 0.04
-                # Calculate movement steps mapped to the drone's current rotation angle
-                self.target_x += step_size * math.cos(self.target_yaw)
-                self.target_y += step_size * math.sin(self.target_yaw)
+                self.target_x += MOVE_SPEED * math.cos(self.target_yaw)
+                self.target_y += MOVE_SPEED * math.sin(self.target_yaw)
                 
             elif self.current_gesture == 'UP':
-                self.target_z -= 0.03  
+                self.target_z -= CLIMB_SPEED  
             elif self.current_gesture == 'DOWN':
-                self.target_z += 0.03  
+                self.target_z += CLIMB_SPEED
                 
             elif self.current_gesture == 'EMERGENCY_STOP':
                 self.get_logger().warn('Fist detected! Engaging Land Routine.')
