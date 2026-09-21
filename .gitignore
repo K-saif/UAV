@@ -2,7 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
-
+setup_1.md
 # C extensions
 *.so
 *.jpeg
