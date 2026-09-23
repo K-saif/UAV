@@ -12,12 +12,7 @@ The project combines **MediaPipe, OpenCV, ROS 2 Jazzy, PX4 Autopilot, Gazebo Har
 
 A short demonstration of the drone being controlled using hand gestures:
 
-![Alt Text](assets/demo.gif)
-
-
-<p align="center">
-  <img src="assets/demo.gif" alt="Gesture Controlled PX4 Drone Demo" width="900">
-</p>
+![demo](/assetes/demo.gif)
 
 **Hand Gesture → Computer Vision → ROS 2 → PX4 → Drone**
 
@@ -75,13 +70,15 @@ The system recognizes gestures from a camera and converts them into flight comma
 
 The current gesture mapping is:
 
-| Gesture          | Command        |
-| ---------------- | -------------- |
-| ☝️ Index finger  | Forward        |
-| ✌️ Two fingers   | Up             |
-| 🤟 Three fingers | Down           |
-| 🖐️ Open palm    | Hold           |
-| ✊ Fist           | Emergency Stop |
+| Gesture          | fingers | Command        |
+| ---------------- |--------------|-------------- |
+| ☝️ one finger    | index finger | Up       |
+| ✌️ Two fingers   | index + middle  | Forward    |
+| 🤟 Three fingers | index + middle + ring | Down          |
+| 🤙 Pinky only up| | right turn |
+| 🤘 Rock  |  |left turn          |
+| 🖐️ Open palm  |  |  Hold           |
+| ✊ Fist       |    | Emergency Stop |
 
 The gesture recognition layer can be extended with additional gestures and flight commands.
 
