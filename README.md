@@ -124,7 +124,7 @@ UAV/
 │           │
 │           └── setup.py
 │
-├── SETUP.md
+├── QuickStart.md
 └── README.md
 ```
 
@@ -150,7 +150,7 @@ The current setup has been tested around:
 
 The complete installation process is documented separately to keep this README concise.
 
-### 👉 [Complete Setup Guide](SETUP.md)
+### 👉 [Complete Setup Guide](QuickStart.md)
 
 The setup guide covers:
 
@@ -174,7 +174,7 @@ The setup guide covers:
 
 ## ▶️ Quick Start
 
-Once the complete setup from [`SETUP.md`](SETUP.md) is finished, the simulation can be launched using separate terminals.
+Once the complete setup from [`QuickStart.md`](QuickStart.md) is finished, the simulation can be launched using separate terminals.
 
 ### 1. Start PX4 + Gazebo
 
@@ -207,7 +207,7 @@ ros2 run px4_control gesture_camera
 
 The drone camera bridge and viewer can be started when the simulated drone camera feed is required.
 
-See the **Drone Camera Feed** section in [`SETUP.md`](SETUP.md) for the required Gazebo topic and commands.
+See the **Drone Camera Feed** section in [`QuickStart.md`](QuickStart.md) for the required Gazebo topic and commands.
 
 ---
 
@@ -287,7 +287,7 @@ Always check the active Gazebo camera topic before starting the camera bridge.
 
 | Document               | Description                           |
 | ---------------------- | ------------------------------------- |
-| [`SETUP.md`](SETUP.md) | Complete installation and setup guide |
+| [`QuickStart.md`](QuickStart.md) | Complete installation and setup guide |
 | `README.md`            | Project overview and quick start      |
 
 ---
@@ -297,20 +297,6 @@ Always check the active Gazebo camera topic before starting the camera bridge.
 Contributions, suggestions, and improvements are welcome.
 
 If you find an issue or have an idea for improving the gesture-control pipeline, feel free to open an **Issue** or **Pull Request**.
-
----
-
-## 📜 License
-
-Add your preferred project license here.
-
----
-
-## 👨‍💻 Author
-
-**Saif Khan**
-
-AI Engineer | Computer Vision | Robotics | UAV Systems
 
 ---
 
