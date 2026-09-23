@@ -1,291 +1,317 @@
-# Install Gazebo Harmonic
+# Gesture-Controlled PX4 Drone 🚁🖐️
 
-The official Gazebo instructions provide Harmonic binaries for Ubuntu 24.04. ([Gazebo][2])
+A computer-vision-based drone control system that uses **hand gestures to control a PX4 drone in Gazebo simulation**.
 
-Install prerequisites:
+The project combines **MediaPipe, OpenCV, ROS 2 Jazzy, PX4 Autopilot, Gazebo Harmonic, and Micro XRCE-DDS** to create a real-time gesture-driven UAV control pipeline.
 
-```bash
-sudo apt update
-sudo apt install curl lsb-release gnupg -y
-```
-
-Add the OSRF repository:
-
-```bash
-sudo curl https://packages.osrfoundation.org/gazebo.gpg \
-  --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
-```
-
-Then:
-
-```bash
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
-```
-
-Update:
-
-```bash
-sudo apt update
-```
-
-Install Harmonic:
-
-```bash
-sudo apt install gz-harmonic -y
-```
+> **Current status:** Working simulation with real-time hand gesture control and PX4 Offboard flight control.
 
 ---
 
-## Verify Gazebo
+## 🎥 Demo
 
-Run:
+A short demonstration of the drone being controlled using hand gestures:
 
-```bash
-gz sim --version
-```
+**Hand Gesture → Computer Vision → ROS 2 → PX4 → Drone**
 
-You should get something indicating:
+The system recognizes gestures from a camera and converts them into flight commands that are sent to the simulated PX4 drone.
+
+---
+
+## 🧠 System Architecture
 
 ```text
-Gazebo Sim, version 8.x.x
+             ┌─────────────────────┐
+             │      Webcam         │
+             └──────────┬──────────┘
+                        │
+                        ▼
+             ┌─────────────────────┐
+             │ MediaPipe + OpenCV  │
+             │  Hand Gesture       │
+             │    Detection        │
+             └──────────┬──────────┘
+                        │
+                  Gesture Command
+                        │
+                        ▼
+             ┌─────────────────────┐
+             │      ROS 2 Jazzy    │
+             │   Gesture / Control │
+             │        Nodes        │
+             └──────────┬──────────┘
+                        │
+                  PX4 Messages
+                        │
+                        ▼
+             ┌─────────────────────┐
+             │ Micro XRCE-DDS      │
+             │       Agent         │
+             └──────────┬──────────┘
+                        │
+                        ▼
+             ┌─────────────────────┐
+             │    PX4 Autopilot    │
+             │    Offboard Mode    │
+             └──────────┬──────────┘
+                        │
+                        ▼
+             ┌─────────────────────┐
+             │   Gazebo Harmonic   │
+             │   X500 Simulation   │
+             └─────────────────────┘
 ```
-
-Harmonic corresponds to Gazebo Sim 8.
-
-Also:
-
-```bash
-which gz
-```
-
-You should get a valid executable path.
 
 ---
 
-## Test Gazebo independently
+## ✋ Gesture Controls
 
-Before involving PX4, test Gazebo itself:
+The current gesture mapping is:
 
-```bash
-gz sim
-```
+| Gesture          | Command        |
+| ---------------- | -------------- |
+| ☝️ Index finger  | Forward        |
+| ✌️ Two fingers   | Up             |
+| 🤟 Three fingers | Down           |
+| 🖐️ Open palm    | Hold           |
+| ✊ Fist           | Emergency Stop |
 
-If the Gazebo GUI opens, close it with:
+The gesture recognition layer can be extended with additional gestures and flight commands.
+
+---
+
+## 🛠️ Tech Stack
+
+### Robotics
+
+* **PX4 Autopilot**
+* **ROS 2 Jazzy**
+* **Gazebo Harmonic**
+* **Micro XRCE-DDS**
+
+### Computer Vision
+
+* **MediaPipe**
+* **OpenCV**
+* Real-time hand landmark detection
+
+### Programming
+
+* **Python**
+* ROS 2 `rclpy`
+* PX4 `px4_msgs`
+
+### Communication
 
 ```text
-Ctrl+C
-```
-
-
----
-
-# Master Setup Guide: ROS 2 Jazzy + PX4 + MediaPipe (Ubuntu 24.04)
-
-## Phase 1: Base System, ROS 2 Jazzy, & Global Python Environment
-
-### 1. Update Ubuntu & Install Prerequisites
-
-Open your terminal and prepare the base system:
-
-```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y software-properties-common curl ca-certificates gnupg lsb-release
-sudo add-apt-repository universe -y
-sudo apt update
-
-```
-
-### 2. Add Official ROS 2 Repository & Install Jazzy Desktop
-
-```bash
-sudo mkdir -p /etc/apt/keyrings
-sudo curl -fsSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /etc/apt/keyrings/ros-archive-keyring.gpg
-
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
-
-sudo apt update
-sudo apt install -y ros-jazzy-desktop ros-dev-tools
-
-```
-
-Make ROS 2 permanent in your shell:
-
-```bash
-echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
-source ~/.bashrc
-
-```
-
-### 3. Install Global Python Libraries & Handle NumPy Compatibility
-
-Modern Ubuntu 24.04 enforces PEP 668. To ensure MediaPipe, OpenCV, and ROS 2 work harmoniously without NumPy version conflicts (`numpy<2`), install them globally using the override flag:
-
-```bash
-sudo apt install -y \
-    python3-colcon-common-extensions \
-    python3-rosdep \
-    python3-vcstool \
-    python3-pip \
-    python3-opencv \
-    ros-jazzy-cv-bridge \
-    ros-jazzy-image-transport \
-    ros-jazzy-vision-msgs \
-    ros-jazzy-ros-gz \
-    ros-jazzy-ros-gz-bridge \
-    ros-jazzy-ros-gz-image
-
-# Install MediaPipe and enforce NumPy 1.x compatibility globally
-pip3 install mediapipe "numpy<2" --break-system-packages
-
-```
-
-Initialize `rosdep`:
-
-```bash
-sudo rosdep init || true
-rosdep update
-
+ROS 2 ↔ Micro XRCE-DDS Agent ↔ PX4
 ```
 
 ---
 
-## Phase 2: PX4 Autopilot & Gazebo Simulator
+## 📁 Project Structure
 
-### 1. Clone PX4-Autopilot Source Code
-
-```bash
-cd ~
-git clone https://github.com/PX4/PX4-Autopilot.git --recursive
-
-```
-
-### 2. Run the Automated Toolchain Script
-
-```bash
-cd ~/PX4-Autopilot/Tools/setup
-bash ubuntu.sh
-
-```
-
-*Note: This script configures your toolchain and installs Gazebo Sim (Ionic) automatically for Ubuntu 24.04.*
-
----
-
-## Phase 3: Micro XRCE-DDS Agent & ROS 2 Workspace
-
-### 1. Build and Install Micro XRCE-DDS Agent
-
-The agent translates internal PX4 flight messages into standard ROS 2 topics.
-
-```bash
-cd ~
-git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git
-cd Micro-XRCE-DDS-Agent
-mkdir build && cd build
-cmake ..
-make
-sudo make install
-sudo ldconfig /usr/local/lib/
-
-```
-
-### 2. Set Up `colcon_ws` and PX4 Message Definitions
-
-```bash
-mkdir -p ~/colcon_ws/src
-cd ~/colcon_ws/src
-git clone https://github.com/PX4/px4_msgs.git -b main
-
-cd ~/colcon_ws
-colcon build
-
-```
-
-Persist your workspace overlay in your shell:
-
-```bash
-echo "source ~/colcon_ws/install/setup.bash" >> ~/.bashrc
-source ~/.bashrc
-
+```text
+UAV/
+│
+├── colcon_ws/
+│   └── src/
+│       └── px4_control/
+│           ├── px4_control/
+│           │   ├── square_mission.py
+│           │   ├── gesture_camera.py
+│           │   └── drone_camera_viewer.py
+│           │
+│           └── setup.py
+│
+├── SETUP.md
+└── README.md
 ```
 
 ---
 
-## Phase 4: copy python files
+## 💻 Requirements
 
-### Create the Python Package
-before copy, make sure you are in your workspace source directory, and create a new Python package named px4_control:
+The current setup has been tested around:
 
-```bash
-cd ~/colcon_ws/src
-ros2 pkg create --build-type ament_python px4_control --dependencies rclpy px4_msgs
-```
+* Ubuntu **24.04**
+* ROS 2 **Jazzy**
+* Gazebo **Harmonic**
+* PX4 Autopilot
+* Python 3
+* Webcam
+* NVIDIA GPU recommended for smoother Gazebo simulation
 
-
-now, copy [px4](/UAV/colcon_ws/src/px4_control/px4_control/) folder to your px4_control folder and [setup.py](/UAV/colcon_ws/src/px4_control/setup.py)
-
-
+> Gazebo Harmonic corresponds to **Gazebo Sim 8.x**.
 
 ---
 
-## Phase 5: Verification & Running the Simulation
+## 🚀 Installation & Setup
 
-### Build and Execute!
-Now compile your package and execute your program:
-```bash
-cd ~/colcon_ws
-colcon build --packages-select px4_control
-source ~/.bashrc
-```
+The complete installation process is documented separately to keep this README concise.
 
+### 👉 [Complete Setup Guide](SETUP.md)
 
-When you want to run your vision control node with the simulator, use **six separate terminal windows**:
+The setup guide covers:
 
-before anything run, 
+1. Ubuntu prerequisites
+2. ROS 2 Jazzy installation
+3. Gazebo Harmonic installation
+4. Python and MediaPipe setup
+5. PX4 Autopilot installation
+6. Micro XRCE-DDS Agent
+7. ROS 2 workspace setup
+8. PX4 message definitions
+9. Creating the `px4_control` package
+10. Copying the project files
+11. Building the ROS 2 workspace
+12. Launching PX4 + Gazebo
+13. Starting the XRCE-DDS communication bridge
+14. Running the gesture-control node
+15. Running the drone camera feed
 
-```bash
-source ~/.bashrc
-```
+---
 
-### 🖥️ Terminal 1: Launch Gazebo Simulation (GPU Accelerated)
+## ▶️ Quick Start
+
+Once the complete setup from [`SETUP.md`](SETUP.md) is finished, the simulation can be launched using separate terminals.
+
+### 1. Start PX4 + Gazebo
+
 ```bash
 cd ~/PX4-Autopilot
 make px4_sitl gz_x500
 ```
 
-### 🌐 Terminal 2: Start Communication Bridge
-```
+### 2. Start Micro XRCE-DDS Agent
+
+```bash
 MicroXRCEAgent udp4 -p 8888
 ```
-### 🧠 Terminal 3: Run the Flight Control Node
+
+### 3. Start the Flight Control Node
+
 ```bash
-source /opt/ros/jazzy/setup.bash
-source ~/colcon_ws/install/setup.bash
+source ~/.bashrc
+
 ros2 run px4_control square_mission
 ```
-### 📷 Terminal 4: Launch MediaPipe Hand Tracking Camera
+
+### 4. Start Hand Gesture Detection
+
 ```bash
-source /opt/ros/jazzy/setup.bash
-source ~/colcon_ws/install/setup.bash
 ros2 run px4_control gesture_camera
 ```
-------------------------------
 
-**only run when needed drone feed**
-note: replace with `world/baylands` with your current like `world/walls` 
+### 5. Optional — Drone Camera Feed
 
-### 📷 Terminal 5: create a bridge for drone cam feed
-```bash
-source /opt/ros/jazzy/setup.bash
-ros2 run ros_gz_bridge parameter_bridge '/world/default/model/x500_depth_0/link/camera_link/sensor/IMX214/image@sensor_msgs/msg/Image@gz.msgs.Image'
+The drone camera bridge and viewer can be started when the simulated drone camera feed is required.
+
+See the **Drone Camera Feed** section in [`SETUP.md`](SETUP.md) for the required Gazebo topic and commands.
+
+---
+
+## 🔄 Control Pipeline
+
+The complete control flow is:
+
+```text
+Webcam
+   │
+   ▼
+MediaPipe Hand Landmarks
+   │
+   ▼
+Gesture Classification
+   │
+   ▼
+ROS 2 Command
+   │
+   ▼
+PX4 Offboard Control
+   │
+   ▼
+Trajectory / Flight Command
+   │
+   ▼
+Simulated X500 Drone
 ```
-------------------------------
 
-### 📷 Terminal 6: create window for drone cam feed
-```bash
-source ~/colcon_ws/install/setup.bash
-ros2 run px4_control drone_camera_viewer
+---
+
+## 🎯 Project Goals
+
+The project is being developed as a foundation for exploring:
+
+* Vision-based UAV control
+* Human–robot interaction
+* Gesture-based interfaces
+* PX4 Offboard control
+* ROS 2 robotics systems
+* Autonomous drone navigation
+* Computer-vision-guided UAVs
+* Autonomous path planning
+
+### Planned Improvements
+
+* [ ] More robust gesture classification
+* [ ] Improved command filtering and debouncing
+* [ ] Autonomous waypoint navigation
+* [ ] Path planning
+* [ ] Obstacle detection
+* [ ] Vision-based navigation
+* [ ] Integration of drone camera perception
+* [ ] Autonomous navigation using computer vision
+
+---
+
+## ⚠️ Notes
+
+This project currently runs the drone in **simulation using PX4 SITL and Gazebo**.
+
+For the best simulation performance, GPU acceleration is recommended.
+
+The camera bridge command may need to be modified depending on the Gazebo world being used. For example:
+
+```text
+world/baylands
+world/walls
+world/default
 ```
-------------------------------
 
+Always check the active Gazebo camera topic before starting the camera bridge.
 
+---
+
+## 📚 Documentation
+
+| Document               | Description                           |
+| ---------------------- | ------------------------------------- |
+| [`SETUP.md`](SETUP.md) | Complete installation and setup guide |
+| `README.md`            | Project overview and quick start      |
+
+---
+
+## 🤝 Contributing
+
+Contributions, suggestions, and improvements are welcome.
+
+If you find an issue or have an idea for improving the gesture-control pipeline, feel free to open an **Issue** or **Pull Request**.
+
+---
+
+## 📜 License
+
+Add your preferred project license here.
+
+---
+
+## 👨‍💻 Author
+
+**Saif Khan**
+
+AI Engineer | Computer Vision | Robotics | UAV Systems
+
+---
+
+⭐ If you find this project interesting, consider giving the repository a star!
