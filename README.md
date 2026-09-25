@@ -12,7 +12,11 @@ The project combines **MediaPipe, OpenCV, ROS 2 Jazzy, PX4 Autopilot, Gazebo Har
 
 A short demonstration of the drone being controlled using hand gestures:
 
-![demo](/assetes/demo.gif)
+
+<p align="center">
+  <img src="./assets/demo.gif" alt="Gesture Controlled PX4 Drone Demo" width="400">
+</p>
+watch full video: [Gesture-Controlled PX4 Drone Demo](https://lnkd.in/p/dMXvTdqU)
 
 **Hand Gesture → Computer Vision → ROS 2 → PX4 → Drone**
 
