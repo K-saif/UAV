@@ -42,9 +42,10 @@ class TargetFollowerNode(Node):
             self.image_cb, 
             qos
         )
+
         self.depth_sub = self.create_subscription(
             Image,
-            '/world/default/model/x500_depth_0/link/camera_link/sensor/IMX214/depth_image',
+            '/depth_camera',  # UPDATED TO MATCH REAL GAZEBO TOPIC
             self.depth_cb,
             qos
         )
@@ -118,31 +119,32 @@ class TargetFollowerNode(Node):
                     self.target_yaw += error_x * yaw_gain  
 
                     # 2. Depth Distance Control (Maintain 3.0 Meters)
-                    if self.latest_depth_frame is not None:
+                    if self.latest_depth_frame is None:
+                        self.get_logger().info("Depth frame NOT received yet! Check topic name or QoS.")
+                    else:
                         cx, cy = int(target_center_x), int(target_center_y)
                         dh, dw = self.latest_depth_frame.shape
                         
-                        # Clip indices within image frame
                         cx = max(0, min(cx, dw - 1))
                         cy = max(0, min(cy, dh - 1))
 
-                        # Extract a 5x5 ROI from depth image to avoid single-pixel noise/NaN
-                        depth_crop = self.latest_depth_frame[max(0, cy-2):min(dh, cy+3), max(0, cx-2):min(dw, cx+3)]
-                        valid_depths = depth_crop[~np.isnan(depth_crop) & ~np.isinf(depth_crop)]
+                        # Sample a slightly larger 11x11 patch around target center
+                        depth_crop = self.latest_depth_frame[max(0, cy-5):min(dh, cy+6), max(0, cx-5):min(dw, cx+6)]
+                        valid_depths = depth_crop[np.isfinite(depth_crop)]
 
                         if len(valid_depths) > 0:
                             target_distance = float(np.median(valid_depths))
                             
-                            DESIRED_DISTANCE = 3.0  # Stop distance target
+                            DESIRED_DISTANCE = 3.0
                             dist_error = target_distance - DESIRED_DISTANCE
                             
-                            # Update drone position setpoint if distance error > 15 cm deadband
                             if abs(dist_error) > 0.15:
                                 move_gain = 0.15
                                 step = move_gain * dist_error
                                 self.target_x += step * math.cos(self.target_yaw)
                                 self.target_y += step * math.sin(self.target_yaw)
-
+                        else:
+                            self.get_logger().info("Target center depth pixels are all NaN / Inf!")
                     target_found = True
                     break
 
