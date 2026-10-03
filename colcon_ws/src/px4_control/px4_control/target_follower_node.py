@@ -19,7 +19,7 @@ class TargetFollowerNode(Node):
         
         # Load lightweight YOLO model
         self.model = YOLO('yolo11n.pt')  
-        self.target_class_id = 32  # COCO class ID (32 = sports ball / 0 = person)
+        self.target_class_id = 0  # COCO class ID (32 = sports ball / 0 = person)
 
         qos = QoSProfile(
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -38,7 +38,7 @@ class TargetFollowerNode(Node):
         # Gazebo Camera Stream Subscriptions (RGB & Depth)
         self.image_sub = self.create_subscription(
             Image, 
-            '/world/default/model/x500_depth_0/link/camera_link/sensor/IMX214/image', 
+            '/world/baylands/model/x500_depth_0/link/camera_link/sensor/IMX214/image', 
             self.image_cb, 
             qos
         )
@@ -90,13 +90,18 @@ class TargetFollowerNode(Node):
         if self.mission_step != 'FOLLOWING':
             return
 
+        depth_cx = None
+        depth_cy = None
+        depth_rgb_cx = None
+        depth_rgb_cy = None
+
         frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
         h, w, _ = frame.shape
         img_center_x = w / 2.0
         img_center_y = h / 2.0
 
         # Run YOLO inference
-        results = self.model(frame, verbose=False)
+        results = self.model(frame, verbose=False,conf=0.6)
         target_found = False
         target_distance = None
 
@@ -112,6 +117,8 @@ class TargetFollowerNode(Node):
                     # Draw Visual Hints
                     cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
                     cv2.line(frame, (int(img_center_x), int(img_center_y)), (int(target_center_x), int(target_center_y)), (0, 0, 255), 2)
+                    cv2.putText(frame, f"Target: ({target_center_x:.1f}, {target_center_y:.1f}) | Center: ({img_center_x:.1f}, {img_center_y:.1f})", 
+                                (30, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
                     # 1. Yaw Control (Center target horizontally)
                     error_x = (target_center_x - img_center_x) / img_center_x
@@ -122,25 +129,54 @@ class TargetFollowerNode(Node):
                     if self.latest_depth_frame is None:
                         self.get_logger().info("Depth frame NOT received yet! Check topic name or QoS.")
                     else:
-                        cx, cy = int(target_center_x), int(target_center_y)
-                        dh, dw = self.latest_depth_frame.shape
-                        
-                        cx = max(0, min(cx, dw - 1))
-                        cy = max(0, min(cy, dh - 1))
+                        depth = self.latest_depth_frame
+                        finite = depth[np.isfinite(depth)]
+                        if len(finite) > 0:
+                            self.get_logger().info(
+                                f"RGB shape={frame.shape}, "
+                                f"Depth shape={depth.shape}, "
+                                f"dtype={depth.dtype}, "
+                                f"min={finite.min():.2f}, "
+                                f"max={finite.max():.2f}"
+                            )
+                        else:
+                            self.get_logger().warning("Entire depth frame contains no finite values!")
 
-                        # Sample a slightly larger 11x11 patch around target center
-                        depth_crop = self.latest_depth_frame[max(0, cy-5):min(dh, cy+6), max(0, cx-5):min(dw, cx+6)]
+                        dh, dw = self.latest_depth_frame.shape
+
+                        # Cast to explicit integers for NumPy array indexing
+                        depth_cx = int(max(0, min(target_center_x, dw - 1)))
+                        depth_cy = int(max(0, min(target_center_y, dh - 1)))
+
+                        depth_rgb_cx = int(max(0, min(img_center_x, dw - 1)))
+                        depth_rgb_cy = int(max(0, min(img_center_y, dh - 1)))
+
+                        # Sample 11x11 patch around integer pixel coordinates
+                        depth_crop = self.latest_depth_frame[
+                            max(0, depth_cy - 5):min(dh, depth_cy + 6),
+                            max(0, depth_cx - 5):min(dw, depth_cx + 6)
+                        ]
                         valid_depths = depth_crop[np.isfinite(depth_crop)]
 
                         if len(valid_depths) > 0:
-                            target_distance = float(np.median(valid_depths))
+                            # 20th percentile targets the front surface of the object smoothly
+                            target_distance = float(np.percentile(valid_depths, 20))
                             
-                            DESIRED_DISTANCE = 3.0
+                            DESIRED_DISTANCE = 5.0
                             dist_error = target_distance - DESIRED_DISTANCE
                             
-                            if abs(dist_error) > 0.15:
-                                move_gain = 0.15
-                                step = move_gain * dist_error
+                            # Lock altitude strictly to 2.0 meters (PX4 NED frame: Z = -2.0)
+                            self.target_z = -2.0
+
+                            # Proportional control with slightly higher speed limits
+                            if abs(dist_error) > 0.20:
+                                move_gain = 0.04      # Increased gain for faster acceleration (was 0.04)
+                                MAX_STEP = 0.8       # Increased max step size for higher top speed (was 0.05)
+                                
+                                # Clamp step between -MAX_STEP and MAX_STEP
+                                step = np.clip(move_gain * dist_error, -MAX_STEP, MAX_STEP)
+                                
+                                # Update position setpoints along heading vector
                                 self.target_x += step * math.cos(self.target_yaw)
                                 self.target_y += step * math.sin(self.target_yaw)
                         else:
@@ -200,6 +236,59 @@ class TargetFollowerNode(Node):
                 self.altitude_step_dir *= -1.0
                 status_text = f"SEARCHING: New Altitude ({abs(self.target_z):.1f}m)"
                 text_color = (0, 0, 255)
+
+        # -----------------------------
+        # Depth Visualization
+        # -----------------------------
+        depth = self.latest_depth_frame
+
+        if depth is not None:
+            depth_vis = depth.copy()
+            valid = np.isfinite(depth_vis)
+
+            if np.any(valid):
+                min_depth = np.min(depth_vis[valid])
+                max_depth = np.max(depth_vis[valid])
+
+                depth_normalized = np.zeros_like(depth_vis, dtype=np.uint8)
+                depth_normalized[valid] = np.clip(
+                    (depth_vis[valid] - min_depth) / (max_depth - min_depth + 1e-6) * 255,
+                    0, 255
+                ).astype(np.uint8)
+
+                depth_colormap = cv2.applyColorMap(depth_normalized, cv2.COLORMAP_JET)
+
+                # Mark the depth pixel corresponding to YOLO target
+                if depth_cx is not None and depth_cy is not None:
+                    sampled_depth = depth[depth_cy, depth_cx]
+
+                    if np.isfinite(sampled_depth):
+                        depth_text = f"{sampled_depth:.2f} m"
+                    else:
+                        depth_text = "NaN / Inf"
+
+                    cv2.putText(
+                        depth_colormap, depth_text, (20, 65),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2
+                    )
+
+                    cv2.circle(depth_colormap, (depth_cx, depth_cy), 8, (255, 255, 255), -1)
+
+                    cv2.putText(
+                        depth_colormap, f"Target: ({depth_cx}, {depth_cy})", (20, 35),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2
+                    )
+                
+                # Mark the depth pixel corresponding to RGB image center
+                if depth_rgb_cx is not None and depth_rgb_cy is not None:
+                    cv2.circle(depth_colormap, (depth_rgb_cx, depth_rgb_cy), 8, (0, 255, 255), -1)
+                    cv2.putText(
+                        depth_colormap, f"Center: ({depth_rgb_cx}, {depth_rgb_cy})", (20, 95),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2
+                    )
+
+                cv2.imshow("Depth Camera", depth_colormap)
+                cv2.waitKey(1)
 
         cv2.putText(frame, status_text, (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, text_color, 2)
         cv2.imshow("YOLO Depth Tracking Stream", frame)
