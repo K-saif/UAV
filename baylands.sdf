@@ -1,0 +1,129 @@
+<sdf version='1.9'>
+  <world name='baylands'>
+    <physics type="ode">
+      <max_step_size>0.004</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <real_time_update_rate>250</real_time_update_rate>
+    </physics>
+    <gravity>0 0 -9.8</gravity>
+    <magnetic_field>6e-06 2.3e-05 -4.2e-05</magnetic_field>
+    <atmosphere type='adiabatic'/>
+    <scene>
+      <ambient>0.8 0.5 1</ambient>
+      <grid>false</grid>
+      <sky>
+        <clouds>true</clouds>
+      </sky>
+      <shadows>1</shadows>
+    </scene>
+    <light name='sunUTC' type='directional'>
+      <pose>0 0 500 0 -0 0</pose>
+      <cast_shadows>false</cast_shadows>
+      <intensity>1</intensity>
+      <direction>0.001 0.625 -0.78</direction>
+      <diffuse>0.904 0.904 0.904 1</diffuse>
+      <specular>0.271 0.271 0.271 1</specular>
+      <attenuation>
+        <range>2000</range>
+        <linear>0</linear>
+        <constant>1</constant>
+        <quadratic>0</quadratic>
+      </attenuation>
+    </light>
+    <include>
+      <uri>
+        https://fuel.gazebosim.org/1.0/OpenRobotics/models/baylands
+      </uri>
+      <name>park</name>
+      <pose>205 155 -1 0 0 0</pose>
+    </include>
+    <include>
+      <uri>
+        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Coast Water
+      </uri>
+      <pose>0 0 -2 0 0 0
+        <relative_to>park</relative_to>
+      </pose>
+    </include>
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <world_frame_orientation>ENU</world_frame_orientation>
+      <latitude_deg>37.412173071650805</latitude_deg>
+      <longitude_deg>-121.998878727967</longitude_deg>
+      <elevation>38</elevation>
+    </spherical_coordinates>
+<!-- Animated Walking Actor moving in a 10x30m rectangle in negative Y -->
+    <actor name="walking_human">
+      <skin>
+        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walk">
+        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <script>
+        <loop>true</loop>
+        <delay_start>0.0</delay_start>
+        <auto_start>true</auto_start>
+        <trajectory id="0" type="walk">
+          
+          <!-- CORNER 1: Start at (0, 0), facing -Y (Yaw = -1.5708 rad = -90 deg) -->
+          <waypoint>
+            <time>0.0</time>
+            <pose>0 0 1 0 0 -1.5708</pose>
+          </waypoint>
+
+          <!-- SIDE 1: Walk forward along -Y to (0, -30) -->
+          <waypoint>
+            <time>15.0</time>
+            <pose>0 -25 1 0 0 -1.5708</pose>
+          </waypoint>
+
+          <!-- TURN 1: Rotate face at (0, -30) to face +X (Yaw = 0.0 rad) -->
+          <waypoint>
+            <time>16.0</time>
+            <pose>0 -25 1 0 0 0.0</pose>
+          </waypoint>
+
+          <!-- SIDE 2: Walk forward along +X to (10, -30) -->
+          <waypoint>
+            <time>23.0</time>
+            <pose>10 -25 1 0 0 0.0</pose>
+          </waypoint>
+
+          <!-- TURN 2: Rotate face at (10, -30) to face +Y (Yaw = 1.5708 rad = +90 deg) -->
+          <waypoint>
+            <time>24.0</time>
+            <pose>10 -25 1 0 0 1.5708</pose>
+          </waypoint>
+
+          <!-- SIDE 3: Walk forward along +Y back to (10, 0) -->
+          <waypoint>
+            <time>39.0</time>
+            <pose>10 0 1 0 0 1.5708</pose>
+          </waypoint>
+
+          <!-- TURN 3: Rotate face at (10, 0) to face -X (Yaw = 3.14159 rad = 180 deg) -->
+          <waypoint>
+            <time>40.0</time>
+            <pose>10 0 1 0 0 3.14159</pose>
+          </waypoint>
+
+          <!-- SIDE 4: Walk forward along -X back to (0, 0) -->
+          <waypoint>
+            <time>46.0</time>
+            <pose>0 0 1 0 0 3.14159</pose>
+          </waypoint>
+
+          <!-- TURN 4: Rotate back to initial orientation (-1.5708 rad) to reset loop smoothly -->
+          <waypoint>
+            <time>47.0</time>
+            <pose>0 0 1 0 0 -1.5708</pose>
+          </waypoint>
+
+        </trajectory>
+      </script>
+    </actor>
+  </world>
+</sdf>
