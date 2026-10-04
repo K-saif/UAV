@@ -189,6 +189,12 @@ class TargetFollowerNode(Node):
         status_text = 'SEARCHING...'
         text_color = (0, 0, 255)
 
+        if self.search_state in ['SEARCHING', 'IDLE']:
+            self.search_state = 'SEARCH_YAW'
+            self.search_start_yaw = self.target_yaw
+            self.yaw_rotated_total = 0.0
+            status_text = "SEARCHING: Rotating 360 Deg..."
+            text_color = (0, 165, 255)
         if target_found:
             self.last_seen_time = now
             self.search_state = 'TRACKING'
