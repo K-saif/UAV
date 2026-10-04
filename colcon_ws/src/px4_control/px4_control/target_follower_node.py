@@ -171,7 +171,7 @@ class TargetFollowerNode(Node):
                             # Proportional control with slightly higher speed limits
                             if abs(dist_error) > 0.20:
                                 move_gain = 0.04      # Increased gain for faster acceleration (was 0.04)
-                                MAX_STEP = 0.8       # Increased max step size for higher top speed (was 0.05)
+                                MAX_STEP = 0.1       # Increased max step size for higher top speed (was 0.05)
                                 
                                 # Clamp step between -MAX_STEP and MAX_STEP
                                 step = np.clip(move_gain * dist_error, -MAX_STEP, MAX_STEP)
