@@ -146,6 +146,11 @@ source ~/.bashrc
 
 Start the PX4 SITL instance using the `x500_depth` model in the `baylands` world:
 
+if you have added custom actors into your world by running python script then run
+```bash
+export GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:$HOME/gz_models
+```
+
 ```bash
 cd ~/PX4-Autopilot
 make px4_sitl gz_x500_depth_baylands
