@@ -146,6 +146,21 @@ source ~/.bashrc
 
 Start the PX4 SITL instance using the `x500_depth` model in the `baylands` world:
 
+#### Create World with actors
+1. Create the recoloured actors
+
+```bash
+python3 make_actor_variants.py
+```
+This only works if Gazebo has already downloaded the actor mesh. Your earlier run should have done that. If the script says "No cached actor found", launch the sim once more, wait for the actors to appear, stop it, and rerun the script.
+
+2. Put the new world where PX4 reads it (the path from your README):
+
+```bash
+cp baylands_variants.sdf ~/PX4-Autopilot/Tools/simulation/gz/worlds/baylands.sdf
+```
+
+The world is still named baylands, so the topic names don't change.
 if you have added custom actors into your world by running python script then run
 ```bash
 export GZ_SIM_RESOURCE_PATH=$GZ_SIM_RESOURCE_PATH:$HOME/gz_models
