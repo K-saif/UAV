@@ -28,6 +28,7 @@ setup(
         'square_mission_sr = px4_control.square_mission_sr:main',
         'gesture_camera = px4_control.gesture_camera:main',
         'drone_camera_viewer = px4_control.drone_camera_viewer:main',
+        'target_follower = px4_control.target_follower_node:main'
         ],
     },
 )
